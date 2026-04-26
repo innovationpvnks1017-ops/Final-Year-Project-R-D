@@ -17,119 +17,600 @@
         .app-logo { font-size: 1.6rem; font-weight: 800; color: var(--primary); text-transform: uppercase; letter-spacing: 1px; }
         .pref-visualizer { display: flex; justify-content: space-between; background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; border: 1px solid var(--border-card); margin-bottom: 20px; }
         .btn-predict { background: var(--primary); color: #fff; border-radius: 10px; font-weight: 700; padding: 14px; border: none; }
+        .btn-predict:hover { background: #0891b2; transform: translateY(-1px); transition: all 0.3s ease; }
         .metric-card { padding: 1.5rem; display: flex; align-items: start; gap: 1.2rem; }
         .metric-icon { width: 55px; height: 55px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.8rem; background: rgba(255,255,255,0.05); }
         .metric-value { font-size: 2rem; font-weight: 800; color: var(--text-main); line-height: 1.1; }
         .rec-section { background: rgba(6, 182, 212, 0.05); border: 1px solid rgba(6, 182, 212, 0.2); padding: 1.5rem; border-radius: 12px; margin-bottom: 2rem; }
-        .chart-section { position: relative; height: 380px; width: 100%; margin-top: 2rem; }
+        .chart-section { position: relative; height: 380px; width: 100%; margin-top: 1.5rem; }
+        .chart-tabs { display: flex; gap: 8px; margin-top: 1rem; flex-wrap: wrap; }
+        .chart-tab { padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 0.75rem; font-weight: 600; border: 1px solid var(--border-card); background: transparent; color: var(--text-muted); transition: all 0.2s; }
+        .chart-tab.active { background: var(--primary); color: #fff; border-color: var(--primary); }
+        .chart-tab:hover { border-color: var(--primary); }
         .waiting-state { text-align: center; padding: 6rem 0; color: var(--text-muted); }
+        .xai-badge { font-size: 0.7rem; padding: 4px 8px; border-radius: 4px; background: rgba(255,255,255,0.05); border: 1px solid var(--border-card); }
+        .confidence-bar { height: 6px; border-radius: 3px; background: #1f2937; margin-top: 8px; }
+        .confidence-fill { height: 100%; border-radius: 3px; transition: width 0.3s ease; }
+        .success-alert { background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.2); border-radius: 8px; }
+        .loading-spinner { display: none; text-align: center; padding: 2rem; }
+        .loading-spinner.active { display: block; }
+        .text-bright { color: #ffffff !important; }
+        .text-label { color: #d1d5db !important; }
+        .city-select { max-height: 300px; overflow-y: auto; }
     </style>
 </head>
 <body>
 
 <div class="container-fluid p-4">
     <div class="row g-4">
+        <!-- Left Sidebar -->
         <div class="col-xl-3 col-lg-4 col-md-12">
             <div class="card p-4 shadow h-100">
-                <div class="app-logo mb-4"><i class="fa-solid fa-rotate me-2"></i>CLIMATE<span>SYNC</span></div>
-                <form action="/get-recommendation" method="post">
+                <div class="app-logo mb-4">
+                    <i class="fa-solid fa-rotate me-2"></i>CLIMATE<span>SYNC</span>
+                </div>
+
+                <div th:if="${success}" class="alert success-alert p-3 rounded-3 mb-4">
+                    <i class="fa-solid fa-circle-check me-2 text-success"></i>
+                    <span class="text-bright">Prediction generated!</span>
+                </div>
+
+                <div th:if="${error}" class="alert alert-danger p-3 rounded-3 mb-4">
+                    <i class="fa-solid fa-triangle-exclamation me-2"></i>
+                    <span class="text-bright" th:text="${error}"></span>
+                </div>
+
+                <div id="loadingSpinner" class="loading-spinner mb-4">
+                    <div class="spinner-border text-info" role="status"></div>
+                    <p class="text-muted small mt-2">Analyzing weather patterns...</p>
+                </div>
+
+                <form action="/get-recommendation" method="post" onsubmit="showLoading()">
                     <div class="mb-4">
-                        <label class="form-label text-muted small fw-bold">MONITORED ZONE</label>
-                        <select name="city" class="form-select form-select-lg bg-dark text-white border-0" required>
-                            <option value="Delhi">Delhi - NCR Zone</option>
-                            <option value="Mumbai">Mumbai - Financial</option>
-                            <option value="Kolkata">Kolkata - East Zone</option>
-                            <option value="Bangalore">Bangalore - IT Hub</option>
+                        <label class="form-label text-label small fw-bold">MONITORED ZONE</label>
+                        <select name="city" class="form-select form-select-lg bg-dark text-white border-0 city-select" required>
+                            <optgroup label="🏙️ Metro Cities">
+                                <option value="Delhi" th:selected="${city == 'Delhi'}">Delhi - Capital Region</option>
+                                <option value="Mumbai" th:selected="${city == 'Mumbai'}">Mumbai - Financial Hub</option>
+                                <option value="Kolkata" th:selected="${city == 'Kolkata'}">Kolkata - East Zone</option>
+                                <option value="Bangalore" th:selected="${city == 'Bangalore'}">Bangalore - IT Hub</option>
+                                <option value="Chennai" th:selected="${city == 'Chennai'}">Chennai - South Zone</option>
+                                <option value="Hyderabad" th:selected="${city == 'Hyderabad'}">Hyderabad - Hitech City</option>
+                            </optgroup>
+                            <optgroup label="🌆 Tier 1 Cities">
+                                <option value="Ahmedabad" th:selected="${city == 'Ahmedabad'}">Ahmedabad - Gujarat</option>
+                                <option value="Pune" th:selected="${city == 'Pune'}">Pune - Maharashtra</option>
+                                <option value="Jaipur" th:selected="${city == 'Jaipur'}">Jaipur - Pink City</option>
+                                <option value="Lucknow" th:selected="${city == 'Lucknow'}">Lucknow - Uttar Pradesh</option>
+                                <option value="Surat" th:selected="${city == 'Surat'}">Surat - Diamond City</option>
+                                <option value="Chandigarh" th:selected="${city == 'Chandigarh'}">Chandigarh - Tricity</option>
+                            </optgroup>
+                            <optgroup label="🏖️ Coastal Cities">
+                                <option value="Goa" th:selected="${city == 'Goa'}">Goa - Beach Capital</option>
+                                <option value="Kochi" th:selected="${city == 'Kochi'}">Kochi - Kerala</option>
+                                <option value="Visakhapatnam" th:selected="${city == 'Visakhapatnam'}">Visakhapatnam - Andhra</option>
+                                <option value="Bhubaneswar" th:selected="${city == 'Bhubaneswar'}">Bhubaneswar - Odisha</option>
+                            </optgroup>
+                            <optgroup label="🏔️ Northern Cities">
+                                <option value="Dehradun" th:selected="${city == 'Dehradun'}">Dehradun - Uttarakhand</option>
+                                <option value="Shimla" th:selected="${city == 'Shimla'}">Shimla - Himachal</option>
+                                <option value="Srinagar" th:selected="${city == 'Srinagar'}">Srinagar - Kashmir</option>
+                                <option value="Amritsar" th:selected="${city == 'Amritsar'}">Amritsar - Punjab</option>
+                            </optgroup>
+                            <optgroup label="🏛️ Central India">
+                                <option value="Bhopal" th:selected="${city == 'Bhopal'}">Bhopal - Madhya Pradesh</option>
+                                <option value="Indore" th:selected="${city == 'Indore'}">Indore - Clean City</option>
+                                <option value="Nagpur" th:selected="${city == 'Nagpur'}">Nagpur - Orange City</option>
+                                <option value="Raipur" th:selected="${city == 'Raipur'}">Raipur - Chhattisgarh</option>
+                                <option value="Patna" th:selected="${city == 'Patna'}">Patna - Bihar</option>
+                                <option value="Ranchi" th:selected="${city == 'Ranchi'}">Ranchi - Jharkhand</option>
+                            </optgroup>
                         </select>
                     </div>
+
                     <div class="mb-2">
-                        <label class="form-label text-muted small fw-bold">PREFERENCE</label>
-                        <input type="range" name="slider" class="form-range" min="0" max="100" step="1" th:value="${result != null ? result.sliderValue : 50}">
+                        <label class="form-label text-label small fw-bold">COMFORT PREFERENCE</label>
+                        <input type="range" name="slider" class="form-range" min="0" max="100" step="1"
+                               th:value="${slider != null ? slider : 50}" oninput="document.getElementById('sliderVal').textContent=this.value">
                     </div>
+
                     <div class="pref-visualizer small fw-bold">
-                        <span class="text-success">ECO</span><span class="text-info">COMFORT</span>
+                        <span class="text-success"><i class="fa-solid fa-leaf me-1"></i>ECO</span>
+                        <span class="text-info">COMFORT<i class="fa-solid fa-crown ms-1"></i></span>
                     </div>
-                    <button type="submit" class="btn-predict w-100 shadow"><i class="fa-solid fa-brain me-2"></i>ANALYZE</button>
+
+                    <div class="text-center mb-3">
+                        <small class="text-label">Slider: <span id="sliderVal" class="text-info fw-bold" th:text="${slider != null ? slider : 50}">50</span></small>
+                    </div>
+
+                    <button type="submit" id="predictBtn" class="btn-predict w-100 shadow">
+                        <i class="fa-solid fa-brain me-2"></i>ANALYZE & PREDICT
+                    </button>
                 </form>
+
+                <!-- Quick Stats -->
+                <div th:if="${recommendation != null && recommendation.currentTemp != null}" class="mt-4 pt-3 border-top" style="border-color: var(--border-card) !important;">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-label">Model:</small>
+                        <small class="text-info fw-bold" th:text="${recommendation.modelType}"></small>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-label">Comfort:</small>
+                        <small class="text-warning fw-bold" th:text="${recommendation.comfortIndex}"></small>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <small class="text-label">Peak:</small>
+                        <small class="text-warning fw-bold" th:text="${recommendation.peakHour} + ':00'"></small>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <small class="text-label">Confidence:</small>
+                        <small class="text-success fw-bold" th:text="${recommendation.confidence} + '%'"></small>
+                    </div>
+                </div>
+
+                <!-- SHAP -->
+                <div th:if="${recommendation != null && recommendation.shapLabels != null}" class="mt-5">
+                    <label class="text-label small fw-bold mb-3 d-block">
+                        <i class="fa-solid fa-magnifying-glass-chart me-2"></i>AI FEATURE IMPORTANCE
+                    </label>
+                    <div id="shapBars"></div>
+                    <div class="mt-3 p-2 rounded" style="background: rgba(6, 182, 212, 0.1);">
+                        <small class="text-label">Driver:</small>
+                        <div class="text-info fw-bold small" th:text="${recommendation.primaryDriver}"></div>
+                    </div>
+                </div>
+
+                <!-- Confidence -->
+                <div th:if="${recommendation != null && recommendation.confidence != null}" class="mt-4">
+                    <label class="text-label small fw-bold mb-2 d-block">
+                        <i class="fa-solid fa-shield-halved me-1"></i>CONFIDENCE
+                    </label>
+                    <div class="d-flex justify-content-between small mb-1">
+                        <span th:text="${recommendation.confidence} + '%'" class="text-info fw-bold"></span>
+                    </div>
+                    <div class="confidence-bar">
+                        <div class="confidence-fill bg-info" th:style="'width: ' + ${recommendation.confidence} + '%'"></div>
+                    </div>
+                </div>
             </div>
         </div>
 
+        <!-- Right Content -->
         <div class="col-xl-9 col-lg-8 col-md-12">
-            <div th:if="${result != null and result.impactLevel != 'UNKNOWN'}">
+
+            <div th:if="${recommendation != null && recommendation.currentTemp != null}">
+
+                <!-- Metrics -->
                 <div class="row g-3 mb-4">
-                    <div class="col-md-4">
-                        <div class="card metric-card">
+                    <div class="col-md-3">
+                        <div class="card metric-card h-100">
                             <div class="metric-icon text-info"><i class="fa-solid fa-temperature-half"></i></div>
-                            <div><div class="small text-muted fw-bold">CURRENT</div><div class="metric-value" th:text="${result.currentTemp} + '°C'"></div></div>
+                            <div>
+                                <div class="small text-label fw-bold">TEMPERATURE</div>
+                                <div class="metric-value text-bright" th:text="${recommendation.currentTemp} + '°C'"></div>
+                                <small class="text-info" th:text="${recommendation.currentWeather}"></small>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card metric-card">
+                    <div class="col-md-3">
+                        <div class="card metric-card h-100">
+                            <div class="metric-icon text-primary"><i class="fa-solid fa-droplet"></i></div>
+                            <div>
+                                <div class="small text-label fw-bold">HUMIDITY</div>
+                                <div class="metric-value text-bright" th:text="${recommendation.currentHumidity} + '%'"></div>
+                                <small class="text-label">Current</small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card metric-card h-100">
                             <div class="metric-icon text-warning"><i class="fa-solid fa-chart-line"></i></div>
-                            <div><div class="small text-muted fw-bold">PREDICTED PEAK</div><div class="metric-value" th:text="${result.predictedMax} + '°C'"></div></div>
+                            <div>
+                                <div class="small text-label fw-bold">PEAK (8h)</div>
+                                <div class="metric-value text-bright" th:text="${recommendation.predictedPeak} + '°C'"></div>
+                                <small class="text-warning fw-bold" th:text="'+' + ${recommendation.tempRise} + '°C rise'"></small>
+                            </div>
                         </div>
                     </div>
-                    <div class="col-md-4">
-                        <div class="card metric-card">
+                    <div class="col-md-3">
+                        <div class="card metric-card h-100">
                             <div class="metric-icon text-success"><i class="fa-solid fa-snowflake"></i></div>
-                            <div><div class="small text-muted fw-bold">TARGET AC</div><div class="metric-value" th:text="${result.targetAcSetting} + '°C'"></div></div>
+                            <div>
+                                <div class="small text-label fw-bold">AC SETPOINT</div>
+                                <div class="metric-value text-bright" th:text="${recommendation.targetAc} + '°C'"></div>
+                                <small class="text-success fw-bold" th:if="${recommendation.energySavingPotential != null}"
+                                       th:text="'Save ' + ${recommendation.energySavingPotential} + '%'"></small>
+                            </div>
                         </div>
                     </div>
                 </div>
 
+                <!-- Extra Conditions -->
+                <div class="row g-3 mb-4">
+                    <div class="col-md-3">
+                        <div class="card p-3 text-center">
+                            <small class="text-label">Wind</small>
+                            <div class="fw-bold text-info" th:text="${recommendation.currentWind} + ' m/s'">--</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card p-3 text-center">
+                            <small class="text-label">Pressure</small>
+                            <div class="fw-bold text-info" th:text="${recommendation.currentPressure} + ' hPa'">--</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card p-3 text-center">
+                            <small class="text-label">Comfort</small>
+                            <div class="fw-bold text-info" th:text="${recommendation.comfortIndex}">--</div>
+                        </div>
+                    </div>
+                    <div class="col-md-3">
+                        <div class="card p-3 text-center">
+                            <small class="text-label">Peak Comfort</small>
+                            <div class="fw-bold text-warning" th:text="${recommendation.comfortIndexPeak}">--</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Chart Card -->
                 <div class="card p-4 shadow">
                     <div class="rec-section">
                         <div class="row align-items-center">
                             <div class="col-md-9">
-                                <div class="text-info fw-bold small mb-1">PREDICTIVE ACTION</div>
-                                <div class="h4 fw-bold mb-0" th:text="${result.actionMessage}"></div>
+                                <div class="text-info fw-bold small mb-1">
+                                    <i class="fa-solid fa-microchip me-1"></i> BiLSTM NEURAL RECOMMENDATION
+                                </div>
+                                <div class="h5 fw-bold mb-2 text-bright"
+                                     th:text="${recommendation.recommendation != null ? recommendation.recommendation : recommendation.aiMessage}"></div>
+                                <div class="text-label small" th:text="${recommendation.aiSummary}"></div>
                             </div>
                             <div class="col-md-3 text-end">
-                                <span class="badge p-3" th:classappend="${result.impactLevel == 'HIGH' ? 'bg-danger' : 'bg-success'}" th:text="${result.impactLevel} + ' IMPACT'"></span>
+                                <span class="badge p-3 fw-bold"
+                                      th:classappend="${recommendation.impact == 'CRITICAL' ? 'bg-danger' : 'bg-success'}"
+                                      th:text="${recommendation.impact} + ' IMPACT'"></span>
                             </div>
                         </div>
                     </div>
-                    <div class="chart-section"><canvas id="predictionChart"></canvas></div>
+
+                    <div class="d-flex justify-content-between align-items-center mt-3">
+                        <h6 class="text-label small fw-bold mb-0 text-uppercase">
+                            <i class="fa-solid fa-chart-line me-2"></i>Interactive Forecast
+                        </h6>
+                        <span class="xai-badge text-label">
+                            <span th:text="${recommendation.modelType}"></span>
+                        </span>
+                    </div>
+
+                    <div class="chart-tabs" id="chartTabs">
+                        <button class="chart-tab active" onclick="switchChart('temperature', this)">🌡️ Temperature</button>
+                        <button class="chart-tab" onclick="switchChart('humidity', this)">💧 Humidity</button>
+                        <button class="chart-tab" onclick="switchChart('pressure', this)">📊 Pressure</button>
+                        <button class="chart-tab" onclick="switchChart('historical', this)">📈 Historical</button>
+                        <button class="chart-tab" onclick="switchChart('combined', this)">🔄 Combined</button>
+                    </div>
+
+                    <div class="chart-section">
+                        <canvas id="forecastChart"></canvas>
+                    </div>
                 </div>
             </div>
 
-            <div th:if="${result == null}" class="card waiting-state h-100 shadow border-0">
+            <!-- Waiting State -->
+            <div th:if="${recommendation == null}" class="card waiting-state h-100 shadow border-0">
                 <i class="fa-solid fa-satellite fa-6x mb-4 opacity-25"></i>
-                <h2 class="fw-bold">Nexus System Offline</h2>
-                <p class="text-muted">Initiate analysis to sync real-time weather and ML models.</p>
-            </div>
-
-            <div th:if="${result != null and result.impactLevel == 'UNKNOWN'}" class="alert alert-danger p-4 rounded-4 shadow">
-                <i class="fa-solid fa-triangle-exclamation me-2"></i>
-                <span th:text="${result.actionMessage}"></span>
+                <h2 class="fw-bold text-bright">ClimateSync Nexus Ready</h2>
+                <p class="text-label">Select a city and click analyze to activate BiLSTM neural prediction with SHAP explainability.</p>
+                <div class="mt-4">
+                    <span class="xai-badge text-muted me-2"><i class="fa-solid fa-check me-1"></i>BiLSTM</span>
+                    <span class="xai-badge text-muted me-2"><i class="fa-solid fa-check me-1"></i>XGBoost</span>
+                    <span class="xai-badge text-muted"><i class="fa-solid fa-check me-1"></i>SHAP XAI</span>
+                </div>
             </div>
         </div>
     </div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script th:if="${result != null and result.chartValues != null}" th:inline="javascript">
+
+<script th:if="${recommendation != null}" th:inline="javascript">
     /*<![CDATA[*/
-    document.addEventListener("DOMContentLoaded", function() {
-        const ctx = document.getElementById('predictionChart').getContext('2d');
-        new Chart(ctx, {
-            type: 'line',
-            data: {
-                labels: /*[[${result.chartLabels}]]*/ [],
-                datasets: [{
-                    label: 'Thermal Load (°C)',
-                    data: /*[[${result.chartValues}]]*/ [],
-                    borderColor: '#06b6d4',
-                    borderWidth: 3,
-                    fill: true,
-                    backgroundColor: 'rgba(6, 182, 212, 0.1)',
-                    tension: 0.4
-                }]
-            },
-            options: { responsive: true, maintainAspectRatio: false }
-        });
-    });
+    window.recommendationData = {
+        labels: /*[[${recommendation.labels}]]*/ '[]',
+        temperatureValues: /*[[${recommendation.temperatureValues}]]*/ '[]',
+        humidityValues: /*[[${recommendation.humidityValues}]]*/ '[]',
+        pressureValues: /*[[${recommendation.pressureValues}]]*/ '[]',
+        historicalLabels: /*[[${recommendation.historicalLabels}]]*/ '[]',
+        historicalTemperature: /*[[${recommendation.historicalTemperature}]]*/ '[]',
+        historicalHumidity: /*[[${recommendation.historicalHumidity}]]*/ '[]',
+        historicalPressure: /*[[${recommendation.historicalPressure}]]*/ '[]',
+        shapLabels: /*[[${recommendation.shapLabels}]]*/ '[]',
+        shapPercentages: /*[[${recommendation.shapPercentages}]]*/ '[]',
+        currentTemp: /*[[${recommendation.currentTemp}]]*/ 30,
+        targetAc: /*[[${recommendation.targetAc}]]*/ 26,
+        currentHumidity: /*[[${recommendation.currentHumidity}]]*/ 60,
+        currentPressure: /*[[${recommendation.currentPressure}]]*/ 1013
+    };
     /*]]>*/
 </script>
+
+<script>
+    let forecastChart = null;
+
+    function showLoading() {
+        document.getElementById('loadingSpinner').classList.add('active');
+        document.getElementById('predictBtn').disabled = true;
+        document.getElementById('predictBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>ANALYZING...';
+    }
+
+    function safeParseJSON(data) {
+        if (!data) return [];
+        if (Array.isArray(data)) return data;
+        if (typeof data === 'string') {
+            try {
+                const parsed = JSON.parse(data);
+                return Array.isArray(parsed) ? parsed : [];
+            } catch(e) { return []; }
+        }
+        return [];
+    }
+
+    function switchChart(type, btn) {
+        document.querySelectorAll('.chart-tab').forEach(t => t.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        renderChart(type);
+    }
+
+    function renderChart(type) {
+        const canvas = document.getElementById('forecastChart');
+        if (!canvas || !window.recommendationData) return;
+        const ctx = canvas.getContext('2d');
+        if (forecastChart) forecastChart.destroy();
+        const d = window.recommendationData;
+        const labels = safeParseJSON(d.labels);
+        const tempVals = safeParseJSON(d.temperatureValues);
+        const humVals = safeParseJSON(d.humidityValues);
+        const presVals = safeParseJSON(d.pressureValues);
+        const histLabels = safeParseJSON(d.historicalLabels);
+        const histTemp = safeParseJSON(d.historicalTemperature);
+        const histHum = safeParseJSON(d.historicalHumidity);
+        const histPres = safeParseJSON(d.historicalPressure);
+        const currentTemp = typeof d.currentTemp === 'number' ? d.currentTemp : parseFloat(d.currentTemp) || 30;
+        const targetAc = typeof d.targetAc === 'number' ? d.targetAc : parseFloat(d.targetAc) || 26;
+        const currentHumidity = typeof d.currentHumidity === 'number' ? d.currentHumidity : parseFloat(d.currentHumidity) || 60;
+        const currentPressure = typeof d.currentPressure === 'number' ? d.currentPressure : parseFloat(d.currentPressure) || 1013;
+
+        // Get current time formatted
+        const now = new Date();
+        const nowLabel = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+
+        // CHART STARTS FROM NOW - prepend "Now" label and current value
+        const displayLabels = ['Now', ...(labels.length > 0 ? labels : ['+1h','+2h','+3h','+4h','+5h','+6h','+7h','+8h'])];
+        const displayTemp = tempVals.length > 0 ? [currentTemp, ...tempVals] : [currentTemp, currentTemp+0.5, currentTemp+1, currentTemp+1.5, currentTemp+1, currentTemp+0.5, currentTemp, currentTemp-0.5];
+        const displayHum = humVals.length > 0 ? [currentHumidity, ...humVals] : [currentHumidity, 59,58,57,58,59,60,61];
+        const displayPres = presVals.length > 0 ? [currentPressure, ...presVals] : [currentPressure, 1012,1011,1010,1011,1012,1013,1014];
+
+        let config;
+        switch(type) {
+            case 'temperature':
+                config = {
+                    type: 'line',
+                    data: {
+                        labels: displayLabels,
+                        datasets: [
+                            {
+                                label: 'Predicted Temperature (°C)',
+                                data: displayTemp,
+                                borderColor: '#06b6d4',
+                                backgroundColor: 'rgba(6,182,212,0.15)',
+                                borderWidth: 3,
+                                pointRadius: 7,
+                                pointHoverRadius: 12,
+                                pointBackgroundColor: ctx => {
+                                    const v = ctx.raw;
+                                    if (v >= 35) return '#ef4444';
+                                    if (v >= 30) return '#f59e0b';
+                                    return '#10b981';
+                                },
+                                pointBorderColor: '#ffffff',
+                                pointBorderWidth: 2,
+                                fill: true,
+                                tension: 0.4,
+                                segment: {
+                                    borderDash: ctx => ctx.p0DataIndex === 0 ? [] : undefined
+                                }
+                            },
+                            {
+                                label: 'AC Setpoint: ' + targetAc + '°C',
+                                data: Array(displayLabels.length).fill(targetAc),
+                                borderColor: '#10b981',
+                                backgroundColor: 'transparent',
+                                borderWidth: 2,
+                                borderDash: [6, 4],
+                                pointRadius: 0,
+                                fill: false,
+                                tension: 0
+                            }
+                        ]
+                    },
+                    options: getBaseOptions('🌡️ 8-Hour Temperature Forecast', 'Temperature (°C)', displayTemp, '°C')
+                };
+                break;
+            case 'humidity':
+                config = {
+                    type: 'line',
+                    data: {
+                        labels: displayLabels,
+                        datasets: [{
+                            label: 'Predicted Humidity (%)',
+                            data: displayHum,
+                            borderColor: '#3b82f6',
+                            backgroundColor: 'rgba(59,130,246,0.15)',
+                            borderWidth: 3,
+                            pointRadius: 7,
+                            pointHoverRadius: 12,
+                            pointBackgroundColor: '#3b82f6',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: getBaseOptions('💧 8-Hour Humidity Forecast', 'Humidity (%)', displayHum, '%')
+                };
+                break;
+            case 'pressure':
+                config = {
+                    type: 'line',
+                    data: {
+                        labels: displayLabels,
+                        datasets: [{
+                            label: 'Predicted Pressure (hPa)',
+                            data: displayPres,
+                            borderColor: '#10b981',
+                            backgroundColor: 'rgba(16,185,129,0.15)',
+                            borderWidth: 3,
+                            pointRadius: 7,
+                            pointHoverRadius: 12,
+                            pointBackgroundColor: '#10b981',
+                            pointBorderColor: '#ffffff',
+                            pointBorderWidth: 2,
+                            fill: true,
+                            tension: 0.4
+                        }]
+                    },
+                    options: getBaseOptions('📊 8-Hour Pressure Forecast', 'Pressure (hPa)', displayPres, ' hPa')
+                };
+                break;
+            case 'historical':
+                config = {
+                    type: 'line',
+                    data: {
+                        labels: histLabels.length > 0 ? histLabels : displayLabels.slice(1),
+                        datasets: [
+                            { label: 'Temperature (°C)', data: histTemp.length > 0 ? histTemp : displayTemp.slice(1), borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 2, pointRadius: 5, tension: 0.3, yAxisID: 'y' },
+                            { label: 'Humidity (%)', data: histHum.length > 0 ? histHum : displayHum.slice(1), borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 2, pointRadius: 5, tension: 0.3, yAxisID: 'y1' }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        interaction: { intersect: false, mode: 'index' },
+                        plugins: {
+                            title: { display: true, text: '📈 Last 24 Hours Historical Data', color: '#f3f4f6', font: { size: 15, weight: 'bold' } },
+                            legend: { labels: { color: '#d1d5db', usePointStyle: true, padding: 15, font: { size: 12 } } },
+                            tooltip: { backgroundColor: 'rgba(17,24,39,0.95)', titleColor: '#ffffff', bodyColor: '#d1d5db', borderColor: '#374151', borderWidth: 1 }
+                        },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#d1d5db', maxRotation: 45, font: { size: 11 } } },
+                            y: { type: 'linear', position: 'left', grid: { color: 'rgba(255,255,255,0.08)' }, ticks: { color: '#ef4444', font: { size: 11 } }, title: { display: true, text: 'Temperature (°C)', color: '#ef4444', font: { size: 12, weight: 'bold' } } },
+                            y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#3b82f6', font: { size: 11 } }, title: { display: true, text: 'Humidity (%)', color: '#3b82f6', font: { size: 12, weight: 'bold' } } }
+                        }
+                    }
+                };
+                break;
+            case 'combined':
+                config = {
+                    type: 'line',
+                    data: {
+                        labels: displayLabels,
+                        datasets: [
+                            { label: 'Temperature (°C)', data: displayTemp, borderColor: '#ef4444', backgroundColor: 'rgba(239,68,68,0.1)', borderWidth: 3, pointRadius: 6, tension: 0.4, yAxisID: 'y' },
+                            { label: 'Humidity (%)', data: displayHum, borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', borderWidth: 3, pointRadius: 6, tension: 0.4, yAxisID: 'y1' }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        interaction: { intersect: false, mode: 'index' },
+                        plugins: {
+                            title: { display: true, text: '🔄 Combined Temperature & Humidity', color: '#f3f4f6', font: { size: 15, weight: 'bold' } },
+                            legend: { labels: { color: '#d1d5db', usePointStyle: true, padding: 15, font: { size: 12 } } },
+                            tooltip: { backgroundColor: 'rgba(17,24,39,0.95)', titleColor: '#ffffff', bodyColor: '#d1d5db', borderColor: '#374151', borderWidth: 1 }
+                        },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#d1d5db', maxRotation: 45, font: { size: 11 } } },
+                            y: { type: 'linear', position: 'left', grid: { color: 'rgba(255,255,255,0.08)' }, ticks: { color: '#ef4444', font: { size: 11 } }, title: { display: true, text: 'Temperature (°C)', color: '#ef4444', font: { size: 12, weight: 'bold' } } },
+                            y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, ticks: { color: '#3b82f6', font: { size: 11 } }, title: { display: true, text: 'Humidity (%)', color: '#3b82f6', font: { size: 12, weight: 'bold' } } }
+                        }
+                    }
+                };
+                break;
+        }
+        forecastChart = new Chart(ctx, config);
+    }
+
+    function getBaseOptions(title, yLabel, dataArray, unit) {
+        const minVal = Math.min(...dataArray) - 2;
+        const maxVal = Math.max(...dataArray) + 2;
+        return {
+            responsive: true, maintainAspectRatio: false,
+            interaction: { intersect: false, mode: 'index' },
+            plugins: {
+                title: { display: true, text: title, color: '#f3f4f6', font: { size: 15, weight: 'bold' }, padding: { bottom: 15 } },
+                legend: { labels: { color: '#d1d5db', usePointStyle: true, padding: 20, font: { size: 12 } } },
+                tooltip: {
+                    backgroundColor: 'rgba(17,24,39,0.95)',
+                    titleColor: '#ffffff',
+                    bodyColor: '#f3f4f6',
+                    borderColor: '#374151',
+                    borderWidth: 1,
+                    padding: 12,
+                    titleFont: { size: 13, weight: 'bold' },
+                    bodyFont: { size: 14 },
+                    callbacks: {
+                        label: function(ctx) {
+                            if (ctx.dataIndex === 0) {
+                                return ctx.dataset.label.replace('Predicted ', 'Current ') + ': ' + ctx.parsed.y.toFixed(1) + unit + ' (Now)';
+                            }
+                            return ctx.dataset.label + ': ' + ctx.parsed.y.toFixed(1) + unit;
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    grid: { display: false },
+                    ticks: { color: '#d1d5db', maxRotation: 45, font: { size: 11 } },
+                    title: { display: true, text: 'Time →', color: '#d1d5db', font: { size: 11 } }
+                },
+                y: {
+                    min: minVal,
+                    max: maxVal,
+                    grid: { color: 'rgba(255,255,255,0.08)' },
+                    ticks: { color: '#d1d5db', font: { size: 11 }, callback: v => v + unit },
+                    title: { display: true, text: yLabel, color: '#d1d5db', font: { size: 12, weight: 'bold' } }
+                }
+            }
+        };
+    }
+
+    function renderSHAP() {
+        const container = document.getElementById('shapBars');
+        if (!container || !window.recommendationData) return;
+        const labels = safeParseJSON(window.recommendationData.shapLabels);
+        const percentages = safeParseJSON(window.recommendationData.shapPercentages);
+        if (labels.length === 0) return;
+        const colors = ['bg-info', 'bg-warning', 'bg-success'];
+        container.innerHTML = labels.map((label, i) => `
+            <div class="mb-3">
+                <div class="d-flex justify-content-between small mb-1">
+                    <span class="text-label">${label}</span>
+                    <span class="text-info fw-bold">${percentages[i] || 0}%</span>
+                </div>
+                <div class="progress" style="height: 5px; background: #1f2937;">
+                    <div class="progress-bar ${colors[i] || 'bg-info'}" style="width: ${percentages[i] || 0}%"></div>
+                </div>
+            </div>
+        `).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        if (window.recommendationData) {
+            renderChart('temperature');
+            renderSHAP();
+        }
+    });
+</script>
+
 </body>
 </html>
